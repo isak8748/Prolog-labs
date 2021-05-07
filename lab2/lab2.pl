@@ -36,7 +36,7 @@ subList(Start, End, Count, [X|Xs], [X|Rec]) :-
     Count =< End,
     NewCount is Count + 1,
     subList(Start, End, NewCount, Xs, Rec).
-subList(Start, End, Count, [X|Xs], Rec) :-
+subList(Start, End, Count, [_|Xs], Rec) :-
     (Start > Count ; Count > End),
     NewCount is Count + 1,
     subList(Start, End, NewCount, Xs, Rec).
@@ -44,13 +44,13 @@ subList(Start, End, Count, [X|Xs], Rec) :-
 writeList([[Start, End], Size], L) :-
     write(Size), write('    '), write(Start), write('    '), write(End), write('    '), subList(Start, End, 1, L, L1), writeln(L1).
 
-writeSolution([], L).
+writeSolution([], _).
 writeSolution([X|Xs], L) :-
     writeList(X, L),
     writeSolution(Xs, L).
 
 solve(L, K) :-
-    write('Size'), write('   '), write('i'), write('    '), write(j), write('    '), writeln('sublist'), 
+    write('Size'), write('   '), write('i'), write('    '), write('j'), write('    '), writeln('sublist'), 
     compute(L, K, Result),
     writeSolution(Result, L).
 

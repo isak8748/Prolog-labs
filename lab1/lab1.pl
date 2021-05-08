@@ -30,5 +30,4 @@ solveR(State, N, Trace):-
     NewN is N-1,
     solveR(NewState, NewN, Rest).
 
-
-nand(X, Y) :- (X, not(Y)); (not(X), Y); (not(X), not(Y)).
+nand(X, Y) :- not((X, Y)).

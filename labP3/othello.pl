@@ -11,7 +11,8 @@
 
 
 %do not chagne the follwoing line!
-:- ensure_loaded('play.pl').
+%:- ensure_loaded('play.pl').
+:-ensure_loaded('stupid.pl').
 
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
@@ -80,6 +81,8 @@ initBoard([ [.,.,.,.,.,.],
 %%%  holds iff InitialState is the initial state and 
 %%%  InitialPlyr is the player who moves first. 
 
+initialize(InitialState, 1):-initBoard(InitialState).
+
 
 
 
@@ -92,8 +95,23 @@ initBoard([ [.,.,.,.,.,.],
 %     - returns winning player if State is a terminal position and
 %     Plyr has a higher score than the other player 
 
+winner(State, Plyr) :- terminal(State), score(State, (Score1, Score2)), Score1 < Score2, Plyr is 1. 
+winner(State, Plyr) :- terminal(State), score(State, (Score1, Score2)), Score1 > Score2, Plyr is 2. 
 
 
+%score([], (0, 0)).
+%score([X|Xs], (Score1, Score2)):- X == 1, score(Xs, (RScore1, Score2)), Score1 is RScore1 + 1. 
+%score([X|Xs], (Score1, Score2)):- X == 2, score(Xs, (Score1, RScore2)), Score2 is RScore2 + 1.
+%score([X|Xs], (Score1, Score2)):- score(Xs, (Score1, Score2)).
+
+score([], (0, 0)).
+score([[]|Rest], S) :- score(Rest, S).
+score([[X|Xs]|Rest], (Score1, Score2)):- X == 1, score([Xs|Rest], (RScore1, Score2)), Score1 is RScore1 + 1, !. 
+score([[X|Xs]|Rest], (Score1, Score2)):- X == 2, score([Xs|Rest], (Score1, RScore2)), Score2 is RScore2 + 1, !.
+score([[X|Xs]|Rest], (Score1, Score2)):- score([Xs|Rest], (Score1, Score2)).
+
+
+testInit(Res):- initBoard(X), score(X, Res).
 
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
@@ -102,6 +120,8 @@ initBoard([ [.,.,.,.,.,.],
 %%
 %% define tie(State) here. 
 %    - true if terminal State is a "tie" (no winner) 
+
+tie(State) :- terminal(State), score(State, (Score1, Score2)), Score1 == Score2.
 
 
 
@@ -114,7 +134,7 @@ initBoard([ [.,.,.,.,.,.],
 %% define terminal(State). 
 %   - true if State is a terminal   
 
-
+terminal(State):-moves(1, State, L1), moves(2, State, L2), L1 == [n], L2 == [n].
 
 
 
@@ -147,6 +167,17 @@ printList([H | L]) :-
 %   - returns list MvList of all legal moves Plyr can make in State
 %
 
+%moves(Plyr, State, MvList):- findall(Move, validmove(Plyr, State, Move), MvList).
+moves(Plyr, State, MvList) :- moveFinder(Plyr, State, [0, 0], MvList), length(MvList, L), L > 0, !.
+moves(Plyr, State, [n]).
+
+moveFinder(Plyr, State, [X, _], []):- X > 5, !.
+moveFinder(Plyr, State, [X, 5], L):- validmove(Plyr, State, [X, 5]), L = [[X, 5]|Rest], NewX is X + 1, moveFinder(Plyr, State, [NewX, 0], Rest), !.
+moveFinder(Plyr, State, [X, 5], Rest):- NewX is X + 1, moveFinder(Plyr, State, [NewX, 0], Rest), !.
+moveFinder(Plyr, State, [X, Y], L):- validmove(Plyr, State, [X, Y]), L = [[X, Y]|Rest], NewY is Y + 1, moveFinder(Plyr, State, [X, NewY], Rest), !.
+moveFinder(Plyr, State, [X, Y], Rest):- NewY is Y + 1, moveFinder(Plyr, State, [X, NewY], Rest).
+
+testMoves(Plyr, MvList):- initBoard(B), moves(Plyr, B, MvList).
 
 
 
@@ -161,6 +192,24 @@ printList([H | L]) :-
 %
 
 
+nextState(Plyr, Move, State, State, NextPlyr):- Move == n, otherPlayer(Plyr, NextPlyr).
+%nextState(Plyr, Move, State, NewState, NextPlyr):-set(State, NewState, Move, Plyr), otherPlayer(Plyr, NextPlyr).
+
+nextState(Plyr, Move, State, NewState, NextPlyr):-tempState(Plyr, Move, State, Tmp), checkBrackets(Plyr, Tmp, [0,0], NewState), otherPlayer(Plyr, NextPlyr).
+
+
+checkBrackets(Plyr, State, [X, _], State):- X > 5, !.
+checkBrackets(Plyr, State, [X, 5], NewState):- checkBrackets2(Plyr, State, [X, 5], Tmp), checkBrackets(Plyr, Tmp, [X, 5], NewState),!.
+checkBrackets(Plyr, State, [X, 5], NewState):- NewX is X + 1,  checkBrackets(Plyr, State, [NewX, 0], NewState),!.
+checkBrackets(Plyr, State, [X, Y], NewState):- checkBrackets2(Plyr, State, [X, Y], Tmp), checkBrackets(Plyr, Tmp, [X, Y], NewState),!.
+checkBrackets(Plyr, State, [X, Y], NewState):- NewY is Y + 1, checkBrackets(Plyr, State, [X, NewY], NewState).
+
+checkBrackets2(Plyr, State, Move, NewState):- get(State, Move, Plyr), direction(D, Move, NextSquare), checkDirection(Plyr, State, Move, D), set(State, NewState, NextSquare, Plyr).
+
+tempState(Plyr, Move, State, NewState):-set(State, NewState, Move, Plyr).
+
+testCB2([X,Y], NewState) :- initBoard(B), set(B, Tmp, [3,1], 1), checkBrackets2(1, Tmp, [X,Y], NewState).
+
 
 
 
@@ -170,6 +219,31 @@ printList([H | L]) :-
 %% 
 %% define validmove(Plyr,State,Proposed). 
 %   - true if Proposed move by Plyr is valid at State.
+
+
+validmove(Plyr, State, Proposed):- get(State, Proposed, V), V \= 1, V \= 2, checkDirection(Plyr, State, Proposed, D).
+
+checkDirection(Plyr, State, Coord, D):- direction(D, Coord, NewCoord), get(State, NewCoord, V), otherPlayer(Plyr, V), checkDirection2(Plyr, State, NewCoord, D).
+
+checkDirection2(Plyr, State, Coord, D):- direction(D, Coord, NewCoord), get(State, NewCoord, V), otherPlayer(Plyr, V), checkDirection2(Plyr, State, NewCoord, D).
+checkDirection2(Plyr, State, Coord, D):- direction(D, Coord, NewCoord), get(State, NewCoord, Plyr).
+
+%inBound([X, Y]):- X < 6, X > -1, Y < 6, Y > -1.
+otherPlayer(1, 2).
+otherPlayer(2, 1).
+
+
+direction(s, [X, Y], [NewX, Y]):- NewX is X + 1.
+direction(n, [X, Y], [NewX, Y]):- NewX is X - 1.
+direction(e, [X, Y], [X, NewY]):- NewY is Y + 1.
+direction(w, [X, Y], [X, NewY]):- NewY is Y - 1.
+direction(se, [X, Y], [NewX, NewY]):- NewX is X + 1, NewY is Y + 1.
+direction(ne, [X, Y], [NewX, NewY]):- NewX is X - 1, NewY is Y + 1.
+direction(sw, [X, Y], [NewX, NewY]):- NewX is X + 1, NewY is Y - 1.
+direction(nw, [X, Y], [NewX, NewY]):- NewX is X - 1, NewY is Y - 1.
+
+testValid([X, Y], Plyr):- initBoard(B), validmove(Plyr, B, [X,Y]).
+getFromInit([X, Y], V):- initBoard(B), get(B, [X, Y], V).
 
 
 
@@ -187,6 +261,15 @@ printList([H | L]) :-
 %          the value of state (see handout on ideas about
 %          good heuristics.
 
+h(State, 100):- winner(State, 2), !.
+h(State, -100):- winner(State, 1), !.
+%h(State, Val):- moves(2, State, MvList), length(MvList, Size), Val is Size. 
+h(State, Val):- countEdges(State, 2, Count2), countEdges(State, 1, Count1), Val is Count2.
+%h(State, Val):- countEdges(State, 2, Count2), score(State, (Score1, Score2)), Val is Count2-Score2.
+
+countEdges(State, Plyr, Count):- findall(Coords, onEdge(State, Coords, Plyr), Bag), length(Bag, Count).
+onEdge(State, [X, Y], Plyr):- get(State, [X,Y], Plyr), (X == 0; X == 5; Y == 0; Y == 5).
+
 
 
 
@@ -199,6 +282,7 @@ printList([H | L]) :-
 %   - returns a value B that is less than the actual or heuristic value
 %     of all states.
 
+lowerBound(-101).
 
 
 
@@ -211,6 +295,7 @@ printList([H | L]) :-
 %   - returns a value B that is greater than the actual or heuristic value
 %     of all states.
 
+upperBound(101).
 
 
 

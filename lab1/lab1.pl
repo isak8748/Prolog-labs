@@ -1,3 +1,7 @@
+
+
+
+
 move(state(Robot, onRobot, BrassKey, Package), drop(steelKey), state(Robot, Robot, BrassKey, Package)).
 move(state(Robot, SteelKey, onRobot, Package), drop(brassKey), state(Robot, SteelKey, Robot, Package)).
 move(state(Robot, SteelKey, BrassKey, onRobot), drop(package), state(Robot, SteelKey, BrassKey, Robot)).
